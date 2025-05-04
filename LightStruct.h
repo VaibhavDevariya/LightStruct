@@ -45,6 +45,14 @@ public:
         return ls;
     }
 
+    int getBool(const std::string& key) const {
+        if (auto obj = std::get_if<Object>(&value_))
+        {
+            if (auto pval = std::get_if<bool>(&obj->at(key).value_))
+                return *pval;
+        }
+    }
+
     int getInt(const std::string& key) const {
         if (auto obj = std::get_if<Object>(&value_)) {
             if (auto pval = std::get_if<int>(&obj->at(key).value_)) 
@@ -188,8 +196,7 @@ private:
         {
             if (text_[pos_] == ']') { ++pos_; break; }
 
-            LightStruct val = parseValue().value();
-            arr.emplace_back(val);
+            arr.emplace_back(std::move(parseValue().value()));
             skipWhitespaces();
             if (text_[pos_] == ',') {
                 ++pos_;
@@ -239,24 +246,6 @@ private:
     }
 
 };
-
-    // LightStruct() : value_(nullptr) {}
-    // LightStruct(bool b) : value_(b) {}
-    // LightStruct(double d) : value_(d) {}
-    // LightStruct(const std::string& s) : value_(s) {}
-    // LightStruct(const char* s) : value_(std::string(s)) {}
-    // LightStruct(const Array& arr) : value_(arr) {}
-    // LightStruct(const Object& obj) : value_(obj) {}
-
-    // bool isNull() const { return std::holds_alternative<std::nullptr_t>(value_); }
-    // bool isBool() const { return std::holds_alternative<bool>(value_); }
-    // bool isNumber() const { return std::holds_alternative<double>(value_); }
-    // bool isString() const { return std::holds_alternative<std::string>(value_); }
-    // bool isArray() const { return std::holds_alternative<Array>(value_); }
-    // bool isObject() const { return std::holds_alternative<Object>(value_); }
-
-
-
     // const Object& asObject() const { return std::get<Object>(value_); }
     // const Array& asArray() const { return std::get<Array>(value_); }
     // const std::string& asString() const { return std::get<std::string>(value_); }
