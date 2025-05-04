@@ -31,15 +31,18 @@ public:
     LightStruct(const Array& arr) : value_(arr) {}
     LightStruct(const Object& obj) : value_(obj) {}
     
-    LightStruct(const std::string& filename, bool file) 
+    static LightStruct fromFile(const std::string& filename) 
     {
         std::ifstream in(filename);
         if (!in) throw std::runtime_error("Failed to open file");
     
         std::ostringstream ss;
         ss << in.rdbuf();
-        text_ = ss.str();
-        parse();
+
+        LightStruct ls;
+        ls.text_ = std::move(ss.str());
+        ls.parse();
+        return ls;
     }
 
     int getInt(const std::string& key) const {
