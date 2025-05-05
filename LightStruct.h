@@ -96,6 +96,30 @@ public:
         return std::get<Object>(value_).at(key);
     }
 
+    bool asBool() {
+        return std::get<bool>(value_);
+    }
+
+    int asInt() {
+        return std::get<int>(value_);
+    }
+    
+    double asDouble() {
+        return std::get<double>(value_);
+    }
+
+    std::string asStr() {
+        return std::get<std::string>(value_);
+    }
+
+    Array asArray() {
+        return std::get<Array>(value_);
+    }
+
+    Object asObject() {
+        return std::get<Object>(value_);
+    }
+
 private:
 
 // ---------------------- PARSING
