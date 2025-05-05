@@ -112,39 +112,57 @@ private:
 
 // ---------------------- PARSING
     void parse() {
-        skipWhitespaces();
+        skipIgnored();
         value_ = parseObject().value(); 
     }
 
-    void skipWhitespaces() {
-        while(pos_ < text_.size() && std::isspace(text_[pos_])) 
-            ++pos_;
+    void skipIgnored() {
+        while (pos_ < text_.size())
+        {
+            if (std::isspace(text_[pos_]))
+                ++pos_;
+            else if (text_[pos_] == '/' && text_[pos_ + 1] == '/') {
+                while (text_[pos_] != '\n')
+                    ++pos_;
+            }
+            else if (text_[pos_] == '/' && pos_ + 1 < text_.size() && text_[pos_ + 1] == '*') {
+                while (pos_ + 1 < text_.size()) { 
+                    if (text_[pos_] == '*' && text_[pos_ + 1] == '/') {
+                        pos_ += 2;
+                        break;
+                    }
+                    ++pos_;
+                }
+            }
+            else break;
+        }
     }
 
     std::optional<Object> parseObject() {
         if (text_[pos_] != '{') return std::nullopt;
         ++pos_;
-        skipWhitespaces();
+        skipIgnored();
 
         Object obj;
 
         while(pos_ < text_.size()) {
+            skipIgnored();
+
             if (text_[pos_] == '}') { ++pos_; break; }
 
             std::string key = parseString().value();
-            skipWhitespaces();
 
             if (text_[pos_] != ':') throw std::runtime_error("Expected ':' after key");
             ++pos_;
-            skipWhitespaces();
+            skipIgnored();
 
             LightStruct value = parseValue().value();
             obj[key] = value;
 
-            skipWhitespaces();
+            skipIgnored();
             if (text_[pos_] == ',') {
                 ++pos_;
-                skipWhitespaces();
+                skipIgnored();
             }
             else if (text_[pos_] == '}') 
             {
@@ -204,7 +222,7 @@ private:
     std::optional<Array> parseArray() {
         if (text_[pos_] != '[') return std::nullopt;
         ++pos_;
-        skipWhitespaces();
+        skipIgnored();
 
         Array arr;
 
@@ -212,10 +230,10 @@ private:
             if (text_[pos_] == ']') { ++pos_; break; }
 
             arr.emplace_back(std::move(parseValue().value()));
-            skipWhitespaces();
+            skipIgnored();
             if (text_[pos_] == ',') {
                 ++pos_;
-                skipWhitespaces();
+                skipIgnored();
             } 
             else if (text_[pos_] == ']') {
                 ++pos_;
