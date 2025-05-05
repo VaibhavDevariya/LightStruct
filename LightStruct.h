@@ -44,52 +44,40 @@ public:
         return ls;
     }
 
-    bool getBool(const std::string& key) const {
+    template <typename T>
+    T getValue(const std::string &key) const{
         if (auto obj = std::get_if<Object>(&value_)) {
-            if (auto pval = std::get_if<bool>(&obj->at(key).value_))
-                return *pval;
+            auto it = obj->find(key);
+            if (it != obj->end()) {
+                if (auto pval = std::get_if<T>(&it->second.value_))
+                    return *pval;
+            }
         }
-        throw std::runtime_error("Value is not a bool for: " + key);
+        throw std::runtime_error("Type mismatch or missing key: " + key);
+    }
+
+    bool getBool(const std::string& key) const {
+        return getValue<bool>(key);
     }
 
     int getInt(const std::string& key) const {
-        if (auto obj = std::get_if<Object>(&value_)) {
-            if (auto pval = std::get_if<int>(&obj->at(key).value_)) 
-                return *pval;
-        }
-        throw std::runtime_error("Value is not an int for: " + key);
+        return getValue<int>(key);
     }
 
     double getDouble(const std::string& key) const {
-        if (auto obj = std::get_if<Object>(&value_)) {
-            if (auto pval = std::get_if<double>(&obj->at(key).value_))
-                return *pval;
-        }
-        throw std::runtime_error("Value is not a double for: " + key);
+        return getValue<double>(key);
     }
     
     std::string getString(const std::string& key) const {
-        if (auto obj = std::get_if<Object>(&value_)) {
-            if (auto pval = std::get_if<std::string>(&obj->at(key).value_)) 
-                return *pval;
-        }
-        throw std::runtime_error("Value is not a string for: " + key);
+        return getValue<std::string>(key);
     }
     
     Array getArray(const std::string& key) const {
-        if (auto obj = std::get_if<Object>(&value_)) {
-            if (auto pval = std::get_if<Array>(&obj->at(key).value_))
-                return *pval;
-        }
-        throw std::runtime_error("Value is not an array for: " + key);
+        return getValue<Array>(key);
     }
 
     Object getObject(const std::string& key) const {
-        if (auto obj = std::get_if<Object>(&value_)) {
-            if (auto pval = std::get_if<Object>(&obj->at(key).value_))
-                return *pval;
-        }
-        throw std::runtime_error("Value is not an object for: " + key);
+        return getValue<Object>(key);
     }
 
     LightStruct& operator[](const std::string &key) {
