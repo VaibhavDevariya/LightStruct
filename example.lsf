@@ -1,0 +1,47 @@
+// Main configuration
+{
+    "app_name": "LightStructParser", // basic string
+
+    "version": 1.0, // floating point
+
+    "debug_mode": true,
+
+    "users": [ // array of objects
+        {
+            "name": "LightStruct",
+            "age": 1,
+            "email": "config@example.com"
+        },
+        {
+            "name": "Bob",
+            "age": "not_an_int", // should trigger type error if enforced
+            "email": "bob@example.com",
+            "roles": ["admin", "editor", ] // trailing comma (should fail if not supported)
+        }
+    ],
+
+    "features": {
+        "logging": true,
+        "max_connections": 1000,
+        "timeout": 30.5,
+        "special_chars": "quote: \\\" backslash: \\\\", // test escapes
+        "invalid_escape": "bad\\escape", // should fail: \e is not valid
+        "unclosed_string": "oops,  // missing closing quote
+        "nested": {
+            "empty_object": {},
+            "empty_array": [],
+            "deep": {
+                "level1": {
+                    "level2": {
+                        "value": 42
+                    }
+                }
+            },
+            "duplicate_key": "first",
+            "duplicate_key": "second" // this one will overwrite "first" in unordered_map
+        },
+        "unterminated_comment": /* this comment never ends...
+    },
+
+    "array_test": [1, 2, 3, "four", true, false, null_value], // null_value is undefined token
+}
