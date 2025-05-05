@@ -45,7 +45,7 @@ public:
         return ls;
     }
 
-    int getBool(const std::string& key) const {
+    bool getBool(const std::string& key) const {
         if (auto obj = std::get_if<Object>(&value_))
         {
             if (auto pval = std::get_if<bool>(&obj->at(key).value_))
