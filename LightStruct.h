@@ -17,8 +17,6 @@ public:
 
 private:
     VariantType value_;
-    std::string text_;
-    size_t pos_ = 0;
 
 public:
     LightStruct() = default;
@@ -38,9 +36,9 @@ public:
         std::ostringstream ss;
         ss << in.rdbuf();
 
-        LightStruct ls;
-        ls.text_ = std::move(ss.str());
-        ls.parse();
+        Parser parser;
+        parser.text_ = std::move(ss.str());
+        LightStruct ls = parser.parse();
         return ls;
     }
 
@@ -84,189 +82,195 @@ public:
         return std::get<Object>(value_).at(key);
     }
 
-    bool asBool() {
+    bool asBool() const {
         return std::get<bool>(value_);
     }
 
-    int asInt() {
+    int asInt() const {
         return std::get<int>(value_);
     }
     
-    double asDouble() {
+    double asDouble() const {
         return std::get<double>(value_);
     }
 
-    std::string asStr() {
+    const std::string& asStr() const {
         return std::get<std::string>(value_);
     }
 
-    Array asArray() {
+    const Array& asArray() const {
         return std::get<Array>(value_);
     }
 
-    Object asObject() {
+    const Object& asObject() const {
         return std::get<Object>(value_);
     }
 
 private:
 
-// ---------------------- PARSING
-    void parse() {
-        skipIgnored();
-        value_ = parseObject().value(); 
-    }
+    class Parser {
+    public:
+        std::string text_;
+        size_t pos_ = 0;
 
-    void skipIgnored() {
-        while (pos_ < text_.size())
-        {
-            if (std::isspace(text_[pos_]))
-                ++pos_;
-            else if (text_[pos_] == '/' && text_[pos_ + 1] == '/') {
-                while (text_[pos_] != '\n')
-                    ++pos_;
-            }
-            else if (text_[pos_] == '/' && pos_ + 1 < text_.size() && text_[pos_ + 1] == '*') {
-                while (pos_ + 1 < text_.size()) { 
-                    if (text_[pos_] == '*' && text_[pos_ + 1] == '/') {
-                        pos_ += 2;
-                        break;
-                    }
-                    ++pos_;
-                }
-            }
-            else break;
+    public:
+        LightStruct parse() {
+            skipIgnored();
+            return parseObject().value();
         }
-    }
 
-    std::optional<Object> parseObject() {
-        if (text_[pos_] != '{') return std::nullopt;
-        ++pos_;
-        skipIgnored();
-
-        Object obj;
-
-        while(pos_ < text_.size()) {
-            skipIgnored();
-
-            if (text_[pos_] == '}') { ++pos_; break; }
-
-            std::string key = parseString().value();
-
-            if (text_[pos_] != ':') throw std::runtime_error("Expected ':' after key");
-            ++pos_;
-            skipIgnored();
-
-            LightStruct value = parseValue().value();
-            obj[key] = value;
-
-            skipIgnored();
-            if (text_[pos_] == ',') {
-                ++pos_;
-                skipIgnored();
-            }
-            else if (text_[pos_] == '}') 
+        void skipIgnored() {
+            while (pos_ < text_.size())
             {
-                ++pos_;
-                break;
-            }
-            else {
-                throw std::runtime_error("Expected ',' or '}' in object");
-            }
-        }
-        return obj;
-    }
-
-    std::optional<std::string> parseString() {
-        if (text_[pos_] != '"') return std::nullopt;
-        ++pos_;
-        std::ostringstream oss;
-
-        while (pos_ < text_.size()) {
-            char c = text_[pos_++];
-            if (c == '"') break;
-            if (c == '\\') {
-                if (pos_ < text_.size()) {
-                    char next = text_[pos_++];
-                    if (next == '"') oss << '"';
-                    else if (next == '\\') oss << '\\';
-                    else throw std::runtime_error("Unsupported escape sequence");
+                if (std::isspace(text_[pos_]))
+                    ++pos_;
+                else if (text_[pos_] == '/' && pos_ + 1 < text_.size() && text_[pos_ + 1] == '/') {
+                    while (text_[pos_] != '\n')
+                        ++pos_;
                 }
-            } 
-            else {
-                oss << c;
+                else if (text_[pos_] == '/' && pos_ + 1 < text_.size() && text_[pos_ + 1] == '*') {
+                    while (pos_ + 1 < text_.size()) {
+                        if (text_[pos_] == '*' && text_[pos_ + 1] == '/') {
+                            pos_ += 2;
+                            break;
+                        }
+                        ++pos_;
+                    }
+                }
+                else break;
             }
         }
-        return oss.str();
-    }
 
-    std::optional<LightStruct> parseValue() {
-        if (pos_ >= text_.size()) return std::nullopt;
-
-        if (text_[pos_] == '"') {
-            auto str = parseString();
-            return LightStruct(str.value());
-        }
-        else if (text_[pos_] == '{') {
-            Object obj = parseObject().value();
-            return LightStruct{ obj };
-        }
-        else if (text_[pos_] == '[') {
-            Array arr = parseArray().value();
-            return LightStruct{arr};
-        } 
-        else {
-            return parseLiteral();
-        }
-    }
-
-    std::optional<Array> parseArray() {
-        if (text_[pos_] != '[') return std::nullopt;
-        ++pos_;
-        skipIgnored();
-
-        Array arr;
-
-        while (pos_ < text_.size()) {
-            if (text_[pos_] == ']') { ++pos_; break; }
-
-            arr.emplace_back(std::move(parseValue().value()));
+        std::optional<Object> parseObject() {
+            if (text_[pos_] != '{') return std::nullopt;
+            ++pos_;
             skipIgnored();
-            if (text_[pos_] == ',') {
+
+            Object obj;
+
+            while (pos_ < text_.size()) {
+                skipIgnored();
+
+                if (text_[pos_] == '}') { ++pos_; break; }
+
+                std::string key = parseString().value();
+
+                if (text_[pos_] != ':') throw std::runtime_error("Expected ':' after key");
                 ++pos_;
                 skipIgnored();
-            } 
-            else if (text_[pos_] == ']') {
-                ++pos_;
-                break;
-            } 
+
+                LightStruct value = parseValue().value();
+                obj[key] = value;
+
+                skipIgnored();
+                if (text_[pos_] == ',') {
+                    ++pos_;
+                    skipIgnored();
+                }
+                else if (text_[pos_] == '}')
+                {
+                    ++pos_;
+                    break;
+                }
+                else {
+                    throw std::runtime_error("Expected ',' or '}' in object");
+                }
+            }
+            return obj;
+        }
+
+        std::optional<std::string> parseString() {
+            if (text_[pos_] != '"') return std::nullopt;
+            ++pos_;
+            std::ostringstream oss;
+
+            while (pos_ < text_.size()) {
+                char c = text_[pos_++];
+                if (c == '"') break;
+                if (c == '\\') {
+                    if (pos_ < text_.size()) {
+                        char next = text_[pos_++];
+                        if (next == '"') oss << '"';
+                        else if (next == '\\') oss << '\\';
+                        else throw std::runtime_error("Unsupported escape sequence");
+                    }
+                }
+                else {
+                    oss << c;
+                }
+            }
+            return oss.str();
+        }
+
+        std::optional<LightStruct> parseValue() {
+            if (pos_ >= text_.size()) return std::nullopt;
+
+            if (text_[pos_] == '"') {
+                auto str = parseString();
+                return LightStruct(str.value());
+            }
+            else if (text_[pos_] == '{') {
+                Object obj = parseObject().value();
+                return LightStruct{ obj };
+            }
+            else if (text_[pos_] == '[') {
+                Array arr = parseArray().value();
+                return LightStruct{ arr };
+            }
             else {
-                throw std::runtime_error("Expected ',' or ']' in array");
+                return parseLiteral();
             }
         }
-        return arr;
-    }
 
-    std::optional<LightStruct> parseLiteral() {
-        size_t start = pos_;
-        while (pos_ < text_.size() && (isalnum(text_[pos_]) || text_[pos_] == '.' || text_[pos_] == '-'))
+        std::optional<Array> parseArray() {
+            if (text_[pos_] != '[') return std::nullopt;
             ++pos_;
+            skipIgnored();
 
-        std::string token = text_.substr(start, pos_ - start);
+            Array arr;
 
-        if (token == "true") return LightStruct(true);
-        if (token == "false") return LightStruct(false);
+            while (pos_ < text_.size()) {
+                if (text_[pos_] == ']') { ++pos_; break; }
 
-        try {
-            if (token.find('.') != std::string::npos)
-                return LightStruct(std::stod(token));
-            else
-                return LightStruct(std::stoi(token));
-        } 
-        catch (...) {
-            throw std::runtime_error("Invalid literal: " + token);
+                arr.emplace_back(std::move(parseValue().value()));
+                skipIgnored();
+                if (text_[pos_] == ',') {
+                    ++pos_;
+                    skipIgnored();
+                }
+                else if (text_[pos_] == ']') {
+                    ++pos_;
+                    break;
+                }
+                else {
+                    throw std::runtime_error("Expected ',' or ']' in array");
+                }
+            }
+            return arr;
         }
-    }
 
+        std::optional<LightStruct> parseLiteral() {
+            size_t start = pos_;
+            while (pos_ < text_.size() && (isalnum(text_[pos_]) || text_[pos_] == '.' || text_[pos_] == '-'))
+                ++pos_;
+
+            std::string token = text_.substr(start, pos_ - start);
+
+            if (token == "true") return LightStruct(true);
+            if (token == "false") return LightStruct(false);
+
+            try {
+                if (token.find('.') != std::string::npos)
+                    return LightStruct(std::stod(token));
+                else
+                    return LightStruct(std::stoi(token));
+            }
+            catch (...) {
+                throw std::runtime_error("Invalid literal: " + token);
+            }
+        }
+    };
+    
     inline std::string escapeString(const std::string& s) {
         std::ostringstream oss;
         oss << '"';
