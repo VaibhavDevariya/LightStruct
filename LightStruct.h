@@ -107,16 +107,13 @@ public:
     }
 
     std::string serialize() {
-        struct Visitor
-        {
-            std::string operator()(Object obj)
-            {
+        struct Visitor {
+            std::string operator()(Object obj) {
                 std::ostringstream oss;
                 oss << "{";
                 bool first = true;
 
-                for (auto& [key, val] : obj)
-                {
+                for (auto& [key, val] : obj) {
                     if (!first) oss << ",";
                     first = false;
                     oss << "\"" << escapeString(key) << "\":" << val.serialize();
@@ -126,14 +123,12 @@ public:
                 return oss.str();
             }
 
-            std::string operator()(Array arr)
-            {
+            std::string operator()(Array arr) {
                 std::ostringstream oss;
                 oss << "[";
                 bool first = true;
 
-                for (auto& val : arr)
-                {
+                for (auto& val : arr) {
                     if (!first) oss << ",";
                     first = false;
                     oss << val.serialize();
