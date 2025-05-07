@@ -1,1 +1,4 @@
-./x64
+x64/
+LightStruct.vcxproj
+LightStruct.vcxproj.filters
+LightStruct.vcxproj.user
