@@ -30,11 +30,11 @@ public:
     LightStruct(const Object& obj) : value_(obj) {}
     
     static LightStruct fromFile(const std::string& filename) {
-        std::ifstream in(filename);
-        if (!in) throw std::runtime_error("Failed to open file");
+        std::ifstream filePtr(filename);
+        if (!filePtr) throw std::runtime_error("Failed to open file");
     
         std::ostringstream ss;
-        ss << in.rdbuf();
+        ss << filePtr.rdbuf();
 
         Parser parser;
         parser.text_ = std::move(ss.str());
@@ -104,6 +104,76 @@ public:
 
     const Object& asObject() const {
         return std::get<Object>(value_);
+    }
+
+    std::string serialize() {
+        struct Visitor
+        {
+            std::string operator()(Object obj)
+            {
+                std::ostringstream oss;
+                oss << "{";
+                bool first = true;
+
+                for (auto& [key, val] : obj)
+                {
+                    if (!first) oss << ",";
+                    first = false;
+                    oss << "\"" << escapeString(key) << "\":" << val.serialize();
+                }
+
+                oss << "}";
+                return oss.str();
+            }
+
+            std::string operator()(Array arr)
+            {
+                std::ostringstream oss;
+                oss << "[";
+                bool first = true;
+
+                for (auto& val : arr)
+                {
+                    if (!first) oss << ",";
+                    first = false;
+                    oss << val.serialize();
+                }
+
+                oss << "]";
+                return oss.str();
+            }
+
+            std::string operator()(std::string& s) {
+                return '"' + escapeString(s) + '"';
+            }
+
+            std::string operator()(bool b) const {
+                return b ? "true" : "false";
+            }
+
+            std::string operator()(int i) const {
+                return std::to_string(i);
+            }
+
+            std::string operator()(double d) const {
+                std::ostringstream oss;
+                oss.precision(15);
+                oss << d;
+                return oss.str();
+            }
+
+            std::string escapeString(const std::string& s) {
+                std::ostringstream oss;
+                for (char c : s) {
+                    if (c == '"') oss << "\\\"";
+                    else if (c == '\\') oss << "\\\\";
+                    else oss << c;
+                }
+                return oss.str();
+            }
+        };
+
+        return std::visit(Visitor{}, value_);
     }
 
 private:
@@ -270,16 +340,4 @@ private:
             }
         }
     };
-    
-    inline std::string escapeString(const std::string& s) {
-        std::ostringstream oss;
-        oss << '"';
-        for (char c : s) {
-            if (c == '"') oss << "\\\"";
-            else if (c == '\\') oss << "\\\\";
-            else oss << c;
-        }
-        oss << '"';
-        return oss.str();
-    }
 };
